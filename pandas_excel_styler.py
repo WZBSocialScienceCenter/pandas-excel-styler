@@ -47,7 +47,10 @@ class ExcelFormatterStyler(fmt.ExcelFormatter):
                 # consider cell style for this regular cell
                 st = self.cell_styles[cell.row - 1, cell.col - 1]
                 if st is not None:
-                    cell.style = st
+                    if type(cell.style) != dict:
+                        cell.style = st
+                    else:
+                        cell.style.update(st)
             yield cell
 
 
