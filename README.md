@@ -68,6 +68,6 @@ that **"Colours in Excel files are a confusing mess"** (ibid.).
 
 ## Requirements
 
-* tested with pandas v0.18.1
+* tested with pandas 0.18.1 and 0.19.0
   * **only works with "xls" files via xlwt engine ("xlsx" support via OpenPyXL is not yet available)**
 * NumPy is required
