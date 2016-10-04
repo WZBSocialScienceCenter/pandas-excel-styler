@@ -69,24 +69,72 @@ np.random.seed()
 
 col1 = np.random.random(20)
 col2 = np.random.randint(0, 11, 20)
-col3 = np.random.choice(list('abc'), 20)
+col3 = np.random.choice(list('abcf'), 20)
 
 df = DataFrameExcelStyler.from_items([('one', col1), ('two', col2), ('three', col3)])
 
 bold_style = {"font": {"bold": True}}
 red_font_style = {"font": {"color": "red"}}
 red_bg_style = {"pattern": {"pattern": "solid_fill", "fore_color": "red"}}
+orange_bg_style = {"pattern": {"pattern": "solid_fill", "fore_color": "orange"}}
 
 cell_styles = np.empty((df.shape[0], df.shape[1] + 1), dtype='object')
 cell_styles.fill(None)
 
+### Test 1 ###
 
 cell_styles[1, 1] = red_font_style
 cell_styles[2, 2] = bold_style
 cell_styles[3, 3] = red_bg_style
 
-cell_styles
+print(cell_styles)
 
+df.to_excel('tmp/test.xls', cell_styles=cell_styles)    # uses xlwt, works
+#df.to_excel('tmp/test.xlsx', cell_styles=cell_styles)  # uses openpyxl, doesn't work
 
-df.to_excel('tmp/test.xls', cell_styles=cell_styles)
-#df.to_excel('tmp/test.xlsx', cell_styles=cell_styles)
+### Test 2 ###
+
+cell_styles = np.empty((df.shape[0], df.shape[1] + 1), dtype='object')
+cell_styles.fill(None)
+
+cell_styles[df.one.values < 0.25, 1] = orange_bg_style
+cell_styles[(df.one.values >= 0.25) & (df.one.values < 0.5), 1] = red_bg_style
+print(cell_styles)
+
+df.to_excel('tmp/test2.xls', cell_styles=cell_styles)    # uses xlwt, works
+
+#%%
+
+### Test 3 ###
+
+df['one_valid'] = df['one'] >= 0.5
+df['three_valid'] = df['three'].isin(list('abc'))
+
+def create_style_for_validations(df, suffix='_valid', error_style='red', remove_validation_cols=False):
+    cell_styles = np.empty((df.shape[0], df.shape[1] + 1), dtype='object')
+    cell_styles.fill(None)
+    
+    if type(error_style) == str:
+        error_style = {"pattern": {"pattern": "solid_fill", "fore_color": error_style}}
+    elif type(error_style) != dict:
+        raise ValueError("Parameter 'error_style' must be either of type 'str' (background color) or a style 'dict'")
+        
+    for col_idx, colname in enumerate(df.columns.values):
+        if colname.endswith(suffix):
+            continue
+        validation_colname = colname + suffix
+        
+        if validation_colname in df.columns.values:
+            cell_styles[~df[validation_colname].values, col_idx + 1] = error_style
+            if remove_validation_cols:
+                validation_col_idx = np.nonzero(df.columns == validation_colname)[0][0] + 1
+                cell_styles = np.delete(cell_styles, validation_col_idx, axis=1)
+                del df[validation_colname]
+    
+    return cell_styles
+
+cell_styles = create_style_for_validations(df, remove_validation_cols=True)
+
+print(cell_styles)
+
+df.to_excel('tmp/test3.xls', cell_styles=cell_styles)    # uses xlwt, works
