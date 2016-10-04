@@ -32,9 +32,9 @@ class ExcelFormatterStyler(fmt.ExcelFormatter):
         
         if self.cell_styles is not None:
             expected_n_rows = self.df.shape[0]
-            expected_n_cols = self.df.shape[1] + 1
+            expected_n_cols = self.df.shape[1]
             if self.cell_styles.shape[0] != expected_n_rows or self.cell_styles.shape[1] == expected_n_cols:
-                ValueError("Argument 'cell_styles' must have the same shape like the data frame plus one column (index column): %dx%d"
+                ValueError("Argument 'cell_styles' must have the same shape like the data frame: %dx%d"
                            % (expected_n_rows, expected_n_cols))
 
     def _format_regular_rows(self):
@@ -43,9 +43,9 @@ class ExcelFormatterStyler(fmt.ExcelFormatter):
         """
         # get cell formatting from parent method
         for cell in super(ExcelFormatterStyler, self)._format_regular_rows():
-            if self.cell_styles is not None:
+            if self.cell_styles is not None and cell.row > 0 and cell.col > 0:
                 # consider cell style for this regular cell
-                st = self.cell_styles[cell.row - 1, cell.col]
+                st = self.cell_styles[cell.row - 1, cell.col - 1]
                 if st is not None:
                     cell.style = st
             yield cell
@@ -104,7 +104,7 @@ def create_style_for_validations(df, suffix='_valid', error_style='red', remove_
 
     
     # create empty cell style matrix
-    cell_styles = np.empty((df.shape[0], df.shape[1] + 1), dtype='object')
+    cell_styles = np.empty((df.shape[0], df.shape[1]), dtype='object')
     cell_styles.fill(None)
         
     # iterate through the columns
@@ -115,11 +115,11 @@ def create_style_for_validations(df, suffix='_valid', error_style='red', remove_
         
         if validation_colname in df.columns.values:   # found a validation result column
             # set the style for all "invalid" cells
-            cell_styles[~df[validation_colname].values, col_idx + 1] = error_style
+            cell_styles[~df[validation_colname].values, col_idx] = error_style
             
             if remove_validation_cols:  # optionally remove the validation result column
                 # remove from cell_styles
-                validation_col_idx = np.nonzero(df.columns == validation_colname)[0][0] + 1
+                validation_col_idx = np.nonzero(df.columns == validation_colname)[0][0]
                 cell_styles = np.delete(cell_styles, validation_col_idx, axis=1)
                 
                 # remove from the original data frame

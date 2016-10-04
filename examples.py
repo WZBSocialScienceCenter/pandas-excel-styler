@@ -23,6 +23,7 @@ col3 = np.random.choice(list('abcf'), 20)
 df = pd.DataFrame.from_items([('one', col1), ('two', col2), ('three', col3)])
 
 # wrap it as DataFrameExcelStyler
+# this will not copy the data from the original data frame (unless you set copy=True)!
 df = DataFrameExcelStyler(df)
 
 # of course you could also fill a DataFrameExcelStyler directly
@@ -42,15 +43,14 @@ orange_bg_style = {"pattern": {"pattern": "solid_fill", "fore_color": "orange"}}
 ### Example 1 ###
 
 # create a cell_styles matrix
-# it must have the same number of rows as your DataFrame and one additional column, because you can also
-# style the index column cells
-cell_styles = np.empty((df.shape[0], df.shape[1] + 1), dtype='object')
+# it must have the same number of rows and columns as your DataFrame
+cell_styles = np.empty((df.shape[0], df.shape[1]), dtype='object')
 cell_styles.fill(None)  # filling it with None means that no styling is applied to all cells
 
 # set some styles
-cell_styles[1, 1] = bold_style
-cell_styles[2, 2] = red_font_style
-cell_styles[3, 3] = red_bg_style
+cell_styles[0, 0] = bold_style
+cell_styles[1, 1] = red_font_style
+cell_styles[2, 2] = red_bg_style
 
 print(cell_styles)
 
@@ -66,13 +66,14 @@ df.to_excel(f_out, cell_styles=cell_styles)    # uses xlwt, works
 
 # Conditional coloring
 
-cell_styles = np.empty((df.shape[0], df.shape[1] + 1), dtype='object')
+cell_styles = np.empty((df.shape[0], df.shape[1]), dtype='object')
 cell_styles.fill(None)
 
 # all values in column "one" below 0.25 will get a red background
 # values between 0.25 and 0.5 will get an orange background
-cell_styles[df.one.values < 0.25, 1] = red_bg_style
-cell_styles[(df.one.values >= 0.25) & (df.one.values < 0.5), 1] = orange_bg_style
+col_idx = 0
+cell_styles[df.one.values < 0.25, col_idx] = red_bg_style
+cell_styles[(df.one.values >= 0.25) & (df.one.values < 0.5), col_idx] = orange_bg_style
 
 print(cell_styles)
 
