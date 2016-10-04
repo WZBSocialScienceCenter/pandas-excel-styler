@@ -45,7 +45,7 @@ orange_bg_style = {"pattern": {"pattern": "solid_fill", "fore_color": "orange"}}
 # create a cell_styles matrix
 # it must have the same number of rows and columns as your DataFrame
 cell_styles = np.empty((df.shape[0], df.shape[1]), dtype='object')
-cell_styles.fill(None)  # filling it with None means that no styling is applied to all cells
+cell_styles.fill(None)  # filling it with None means that no styling is applied to any cell
 
 # set some styles
 cell_styles[0, 0] = bold_style
@@ -66,7 +66,7 @@ df.to_excel(f_out, cell_styles=cell_styles)    # uses xlwt, works
 
 # Conditional coloring
 
-cell_styles = np.empty((df.shape[0], df.shape[1]), dtype='object')
+cell_styles = np.empty(df.shape, dtype='object')
 cell_styles.fill(None)
 
 # all values in column "one" below 0.25 will get a red background
