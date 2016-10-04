@@ -1,11 +1,13 @@
 # -*- coding: utf-8 -*-
 """
-Created on Fri Sep 30 15:37:48 2016
+Extended classes for styling individual cells of pandas Excel exports.
+Currently, only export to "xls" files via xlwt is supported. "xlsx" export via OpenPyXL is not available.
 
-@author: mkonrad
+Created on Tue Oct  4 11:32:10 2016
+
+@author: Markus Konrad <markus.konrad@wzb.eu>
 """
 
-# see also https://xlsxwriter.readthedocs.io/working_with_pandas.html
 
 import numpy as np
 import pandas as pd
@@ -13,34 +15,56 @@ import pandas as pd
 from pandas import compat
 import pandas.formats.format as fmt
 
-
-#%%
+#%% Class extensions to pandas
 
 class ExcelFormatterStyler(fmt.ExcelFormatter):
+    """
+    Extended ExcelFormatter class that accepts additional "cell_styles" matrix
+    """
+    
     def __init__(self, *args, **kwargs):
+        """
+        Extended constructor that accepts additional "cell_styles" matrix
+        """
         self.cell_styles = kwargs.pop('cell_styles')
         
         super(ExcelFormatterStyler, self).__init__(*args, **kwargs)
         
         if self.cell_styles is not None:
-            assert self.cell_styles.shape[0] == self.df.shape[0]
-            assert self.cell_styles.shape[1] == self.df.shape[1] + 1
+            expected_n_rows = self.df.shape[0]
+            expected_n_cols = self.df.shape[1] + 1
+            if self.cell_styles.shape[0] != expected_n_rows or self.cell_styles.shape[1] == expected_n_cols:
+                ValueError("Argument 'cell_styles' must have the same shape like the data frame plus one column (index column): %dx%d"
+                           % (expected_n_rows, expected_n_cols))
 
     def _format_regular_rows(self):
+        """
+        Extended function that handles formatting of regular cells also considering cell_styles matrix
+        """
+        # get cell formatting from parent method
         for cell in super(ExcelFormatterStyler, self)._format_regular_rows():
-            #print(cell.row, cell.col, cell.val)
             if self.cell_styles is not None:
+                # consider cell style for this regular cell
                 st = self.cell_styles[cell.row - 1, cell.col]
                 if st is not None:
                     cell.style = st
             yield cell
 
+
 class DataFrameExcelStyler(pd.DataFrame):
+    """
+    Extended DataFrame class that accepts additional "cell_styles" matrix and uses the extended
+    ExcelFormatterStyler as formatter class.
+    """
+    
     def to_excel(self, excel_writer, sheet_name='Sheet1', na_rep='',
                  cell_styles=None,   # new argument
                  float_format=None, columns=None, header=True, index=True,
                  index_label=None, startrow=0, startcol=0, engine=None,
                  merge_cells=True, encoding=None, inf_rep='inf', verbose=True):
+        """
+        Extended function that adds support for "cell_styles" argument
+        """
         from pandas.io.excel import ExcelWriter
         need_save = False
         if encoding is None:
@@ -49,7 +73,8 @@ class DataFrameExcelStyler(pd.DataFrame):
         if isinstance(excel_writer, compat.string_types):
             excel_writer = ExcelWriter(excel_writer, engine=engine)
             need_save = True
-
+        
+        # use the extended formatter class and pass the cell_styles argument
         formatter = ExcelFormatterStyler(self, na_rep=na_rep, cols=columns,
                                          header=header,
                                          cell_styles=cell_styles,   # new argument
@@ -64,77 +89,41 @@ class DataFrameExcelStyler(pd.DataFrame):
             excel_writer.save()
 
 
-
-np.random.seed()
-
-col1 = np.random.random(20)
-col2 = np.random.randint(0, 11, 20)
-col3 = np.random.choice(list('abcf'), 20)
-
-df = DataFrameExcelStyler.from_items([('one', col1), ('two', col2), ('three', col3)])
-
-bold_style = {"font": {"bold": True}}
-red_font_style = {"font": {"color": "red"}}
-red_bg_style = {"pattern": {"pattern": "solid_fill", "fore_color": "red"}}
-orange_bg_style = {"pattern": {"pattern": "solid_fill", "fore_color": "orange"}}
-
-cell_styles = np.empty((df.shape[0], df.shape[1] + 1), dtype='object')
-cell_styles.fill(None)
-
-### Test 1 ###
-
-cell_styles[1, 1] = red_font_style
-cell_styles[2, 2] = bold_style
-cell_styles[3, 3] = red_bg_style
-
-print(cell_styles)
-
-df.to_excel('tmp/test.xls', cell_styles=cell_styles)    # uses xlwt, works
-#df.to_excel('tmp/test.xlsx', cell_styles=cell_styles)  # uses openpyxl, doesn't work
-
-### Test 2 ###
-
-cell_styles = np.empty((df.shape[0], df.shape[1] + 1), dtype='object')
-cell_styles.fill(None)
-
-cell_styles[df.one.values < 0.25, 1] = orange_bg_style
-cell_styles[(df.one.values >= 0.25) & (df.one.values < 0.5), 1] = red_bg_style
-print(cell_styles)
-
-df.to_excel('tmp/test2.xls', cell_styles=cell_styles)    # uses xlwt, works
-
-#%%
-
-### Test 3 ###
-
-df['one_valid'] = df['one'] >= 0.5
-df['three_valid'] = df['three'].isin(list('abc'))
+#%% Utility functions
 
 def create_style_for_validations(df, suffix='_valid', error_style='red', remove_validation_cols=False):
-    cell_styles = np.empty((df.shape[0], df.shape[1] + 1), dtype='object')
-    cell_styles.fill(None)
-    
+    """
+    Create a "cell_styles" matrix for a data frame with boolean validation result columns suffixed
+    with <suffix>.
+    """
+    # check arguments
     if type(error_style) == str:
         error_style = {"pattern": {"pattern": "solid_fill", "fore_color": error_style}}
     elif type(error_style) != dict:
-        raise ValueError("Parameter 'error_style' must be either of type 'str' (background color) or a style 'dict'")
+        raise ValueError("Argument 'error_style' must be either of type 'str' (background color) or a style 'dict'")
+
+    
+    # create empty cell style matrix
+    cell_styles = np.empty((df.shape[0], df.shape[1] + 1), dtype='object')
+    cell_styles.fill(None)
         
+    # iterate through the columns
     for col_idx, colname in enumerate(df.columns.values):
         if colname.endswith(suffix):
             continue
         validation_colname = colname + suffix
         
-        if validation_colname in df.columns.values:
+        if validation_colname in df.columns.values:   # found a validation result column
+            # set the style for all "invalid" cells
             cell_styles[~df[validation_colname].values, col_idx + 1] = error_style
-            if remove_validation_cols:
+            
+            if remove_validation_cols:  # optionally remove the validation result column
+                # remove from cell_styles
                 validation_col_idx = np.nonzero(df.columns == validation_colname)[0][0] + 1
                 cell_styles = np.delete(cell_styles, validation_col_idx, axis=1)
+                
+                # remove from the original data frame
                 del df[validation_colname]
     
     return cell_styles
 
-cell_styles = create_style_for_validations(df, remove_validation_cols=True)
-
-print(cell_styles)
-
-df.to_excel('tmp/test3.xls', cell_styles=cell_styles)    # uses xlwt, works
