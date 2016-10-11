@@ -42,10 +42,11 @@ class ExcelFormatterStyler(fmt.ExcelFormatter):
         Extended function that handles formatting of regular cells also considering cell_styles matrix
         """
         # get cell formatting from parent method
+        col_offset = -1 if self.index else 0
         for cell in super(ExcelFormatterStyler, self)._format_regular_rows():
             if self.cell_styles is not None and cell.row > 0 and cell.col > 0:
                 # consider cell style for this regular cell
-                st = self.cell_styles[cell.row - 1, cell.col - 1]
+                st = self.cell_styles[cell.row - 1, cell.col + col_offset]
                 if st is not None:
                     if type(cell.style) != dict:
                         cell.style = st
