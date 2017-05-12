@@ -2,6 +2,8 @@
 
 Styling individual cells in Excel output files created with [Python's Data Analysis Library pandas](http://pandas.pydata.org/).
 
+**DEPRECATION NOTICE:** A new feature for styling Excel output was [introduced with pandas v0.20](http://pandas-docs.github.io/pandas-docs-travis/whatsnew.html#whatsnew-0200-enhancements-style-excel), so this extension here is only needed in case you're using an older version of pandas or need to export to `.xls` files instead of `.xlsx`.
+
 ## Description
 
 This small addition to *pandas* allows to specify styles for individual cells in Excel exports from pandas DataFrames,
