@@ -13,7 +13,7 @@ import numpy as np
 import pandas as pd
 
 from pandas import compat
-import pandas.formats.format as fmt
+import pandas.io.formats.excel as fmt
 
 #%% Class extensions to pandas
 
